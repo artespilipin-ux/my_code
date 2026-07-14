@@ -18,7 +18,12 @@ jobs:
       - name: Restore source
         run: |
           mkdir -p job-assistant-lite
-          base64 -D job-assistant-lite-src.tar.gz.b64 > job-assistant-lite-src.tar.gz
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          encoded = Path('job-assistant-lite-src.tar.gz.b64').read_text(encoding='utf-8').strip()
+          Path('job-assistant-lite-src.tar.gz').write_bytes(base64.b64decode(encoded))
+          PY
           tar -xzf job-assistant-lite-src.tar.gz -C job-assistant-lite
       - name: Install dependencies
         working-directory: job-assistant-lite
