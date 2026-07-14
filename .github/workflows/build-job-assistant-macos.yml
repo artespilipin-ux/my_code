@@ -18,7 +18,7 @@ jobs:
       - name: Restore source
         run: |
           mkdir -p job-assistant-lite
-          base64 --decode job-assistant-lite-src.tar.gz.b64 > job-assistant-lite-src.tar.gz
+          base64 -D job-assistant-lite-src.tar.gz.b64 > job-assistant-lite-src.tar.gz
           tar -xzf job-assistant-lite-src.tar.gz -C job-assistant-lite
       - name: Install dependencies
         working-directory: job-assistant-lite
