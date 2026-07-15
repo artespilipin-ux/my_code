@@ -1,0 +1,56 @@
+name: Build Job Assistant for macOS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/job-assistant-macos]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Restore source
+        run: |
+          mkdir -p job-assistant-lite
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          src = Path('job-assistant-lite-src.tar.gz.b64').read_text().encode()
+          Path('job-assistant-lite-src.tar.gz').write_bytes(base64.b64decode(src))
+          PY
+          tar -xzf job-assistant-lite-src.tar.gz -C job-assistant-lite
+      - name: Configure native Apple Silicon build
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const file = 'job-assistant-lite/package.json';
+          const p = JSON.parse(fs.readFileSync(file, 'utf8'));
+          p.scripts['build:mac'] = 'electron-builder --mac --arm64';
+          p.build.mac.target = [
+            { target: 'dmg', arch: ['arm64'] },
+            { target: 'zip', arch: ['arm64'] }
+          ];
+          fs.writeFileSync(file, JSON.stringify(p, null, 2) + '\n');
+          NODE
+      - name: Install dependencies
+        working-directory: job-assistant-lite
+        run: npm install
+      - name: Build ARM64 DMG and ZIP
+        working-directory: job-assistant-lite
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run build:mac
+      - name: Upload application
+        uses: actions/upload-artifact@v4
+        with:
+          name: Job-Assistant-macOS-arm64
+          path: |
+            job-assistant-lite/dist/*.dmg
+            job-assistant-lite/dist/*.zip
+          if-no-files-found: error
